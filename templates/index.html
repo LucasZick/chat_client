@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to right, #141e30, #243b55);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #chat {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+        #messages {
+            height: 300px;
+            border: 1px solid #444;
+            border-radius: 10px;
+            overflow-y: scroll;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .message strong {
+            display: block;
+        }
+        .message.self {
+            text-align: right;
+            background: #1f4068;
+        }
+        .message.system {
+            color: #aaaaaa;
+        }
+        #usernameForm, #chatForm {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        input[type="text"], button {
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="text"] {
+            flex: 1;
+            margin-right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+        button {
+            background: #1f4068;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #162447;
+        }
+        #usernameForm input[type="text"] {
+            flex: none;
+            width: calc(100% - 120px);
+        }
+        #usernameForm button {
+            width: 100px;
+        }
+        #chatForm button {
+            width: 70px;
+        }
+        #leaveRoomBtn {
+            width: 70px;
+            margin-left: 10px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const socket = io();
+
+            const usernameForm = document.getElementById('usernameForm');
+            const chatForm = document.getElementById('chatForm');
+            const messages = document.getElementById('messages');
+            const usernameInput = document.getElementById('username');
+            const messageInput = document.getElementById('message');
+
+            let username = '';
+
+            usernameForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                username = usernameInput.value;
+                socket.emit('join', { username });
+                document.getElementById('usernameContainer').style.display = 'none';
+                document.getElementById('chatContainer').style.display = 'block';
+            });
+
+            chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const message = messageInput.value;
+                if (message) {
+                    socket.emit('message', { username, message });
+                    messageInput.value = '';
+                }
+            });
+
+            document.getElementById('leaveRoomBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                socket.emit('leave', { username });
+                document.getElementById('usernameContainer').style.display = 'block';
+                document.getElementById('chatContainer').style.display = 'none';
+                messages.innerHTML = '';  // Limpa as mensagens ao sair da sala
+            });
+
+            socket.on('message', (data) => {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message');
+                if (data.username === username) {
+                    messageElement.classList.add('self');
+                } else if (data.username === 'System') {
+                    messageElement.classList.add('system');
+                }
+                messageElement.innerHTML = `<strong>${data.username}</strong>${data.message}`;
+                messages.appendChild(messageElement);
+                messages.scrollTop = messages.scrollHeight;
+            });
+        });
+    </script>
+</head>
+<body>
+    <div id="chat">
+        <div id="usernameContainer">
+            <form id="usernameForm">
+                <input type="text" id="username" placeholder="Enter username" required>
+                <button type="submit">Join Chat</button>
+            </form>
+        </div>
+        <div id="chatContainer" style="display: none;">
+            <div id="messages"></div>
+            <form id="chatForm">
+                <input type="text" id="message" placeholder="Enter message" autocomplete="off" required>
+                <button type="submit">Send</button>
+                <button id="leaveRoomBtn">Leave</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
